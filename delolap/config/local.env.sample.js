@@ -9,5 +9,6 @@ module.exports = {
     DB_USER: 'user',
     DB_PWD: 'password',
     DB_HOST: 'localhost',
-    DB_PORT: '5432'
+    DB_PORT: '5432',
+    DB_NAME: 'sample'
 };
