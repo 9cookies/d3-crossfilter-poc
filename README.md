@@ -11,3 +11,6 @@ To run the app, checkout this repo and create a config file `:
 - `npm install && bower install && npm start`
 
 Go to `http://localhost:3000` and wait for the data to be loaded. First load on STG environment is slow and can take up to 1-2 minutes.
+
+Tip:
+- map a remote database to localhost `ssh -N -L 5432:db.url:5432 bastionsuser@ssh.bastion.url`
