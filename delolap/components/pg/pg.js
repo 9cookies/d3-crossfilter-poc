@@ -12,18 +12,23 @@ function connect(callback) {
     pg.connect(CON_STRING, callback);
 }
 
-exports.query = function (query, params, callback) {
+exports.query = function (query, params, callback, errCallback) {
     connect(function (err, client, done) {
-        if (err) {
-            return console.error('Error fetching client from pool!', err);
-        }
-        client.query(query, params, function (err, result) {
-            done();
-            if (err) {
-                return console.error('Error running query ' + query + ' with params {' + params + '}!', err);
+        var handleError = function (err) {
+            if (!err) return false;
+            if (client) {
+                done(client);
             }
+            if (errCallback) {
+                errCallback(err);
+            }
+            return true;
+        };
+        if (handleError(err)) return;
+        client.query(query, params, function (err, result) {
+            if (handleError(err)) return;
+            done();
             callback(result.rows);
-            client.end();
         });
     });
 };

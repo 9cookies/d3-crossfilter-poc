@@ -1,17 +1,14 @@
 'use strict';
 
 angular.module('delolap')
-    .controller('MainCtrl', ['$scope', '$http', 'ChartService', function ($scope, $http, ChartService) {
-        var DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-        $scope.model = {};
-        $scope.model.deliveries = [];
+    .controller('MainCtrl', ['$scope', '$http', 'dcService', function ($scope, $http, dc) {
+        var DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            model = {};
+        $scope.model = model;
+        model.deliveries = [];
 
         function daysToMillis(days) {
             return days * 24 * 60 * 60 * 1000;
-        }
-
-        function dayRange(from, to) {
-            return Math.floor((roundDate(to).getTime() - roundDate(from).getTime() - 1) / daysToMillis(1)) + 1;
         }
 
         function roundDate(date) {
@@ -39,25 +36,17 @@ angular.module('delolap')
             return arr;
         }
 
-        $scope.model.days = 60;
-        $scope.model.from = roundDate(new Date(Date.now() - daysToMillis($scope.model.days)));
-        $scope.model.to = new Date($scope.model.from.getTime() + daysToMillis($scope.model.days + 1) - 1);
+        model.days = 60;
+        model.from = roundDate(new Date(Date.now() - daysToMillis(model.days)));
+        model.to = new Date(model.from.getTime() + daysToMillis(model.days + 1) - 1);
 
-        $scope.model.loading = true;
-        $http.get('/api/deliveries', {
-            params: {
-                from: $scope.model.from,
-                to: $scope.model.to
-            }
-        }).success(function (result) {
-            var deliveries = preProcess(result.data),
-                roundGroup = function (val) {
+        function initCrossfilter(deliveries) {
+            var roundGroup = function (val) {
                     return function (d) {
                         return Math.floor(d / val) * val;
                     };
                 },
                 delivery = crossfilter(deliveries),
-                all = delivery.groupAll(),
             // date
                 date = delivery.dimension(function (d) {
                     return d.delivery_timestamp;
@@ -93,6 +82,11 @@ angular.module('delolap')
                     return d.preparation_duration;
                 }),
                 preparationDurations = preparationDuration.group(roundGroup(60)),
+            // indicated cooking time
+                indicatedCookingTime = delivery.dimension(function (d) {
+                    return d.indicated_cooking_time;
+                }),
+                indicatedCookingTimes = indicatedCookingTime.group(roundGroup(60)),
             // distance
                 distance = delivery.dimension(function (d) {
                     return d.distance / 1000;
@@ -127,122 +121,176 @@ angular.module('delolap')
                 return (negative ? '-' : '') + min + ':' + (sec > 9 ? sec : '0' + sec);
             }
 
-            $scope.model.charts = [
+            function xUnits(cnt) {
+                return function () {
+                    return cnt;
+                }
+            }
+
+            model.deliveryCrossfilter = delivery;
+            model.charts = [
                 {
+                    id: 'startDelay',
                     title: 'Start delay [mmm:ss]',
                     model: {
+                        width: 1060,
                         crossFilterGroup: 1,
                         dimension: startDelay,
                         group: startDelays,
-                        x: d3.scale.linear().domain([-6000, 6000]).rangeRound([0, 10 * 100]),
+                        x: d3.scale.linear().domain([-6000, 6000]),
+                        xUnits: xUnits(200),
                         xAxisFormatter: formatSeconds,
                         barWidth: 5
                     }
                 },
                 {
+                    id: 'deliveredDelay',
                     title: 'Delivered delay [mmm:ss]',
                     model: {
+                        width: 1060,
                         crossFilterGroup: 1,
                         dimension: deliveredDelay,
                         group: deliveredDelays,
-                        x: d3.scale.linear().domain([-6000, 6000]).rangeRound([0, 10 * 100]),
+                        x: d3.scale.linear().domain([-6000, 6000]),
+                        xUnits: xUnits(200),
                         xAxisFormatter: formatSeconds,
                         barWidth: 5
                     }
                 },
                 {
+                    id: 'acceptanceDuration',
                     title: 'Acceptance duration [mmm:ss]',
                     model: {
+                        width: 1060,
                         crossFilterGroup: 1,
                         dimension: acceptanceDuration,
                         group: acceptanceDurations,
-                        x: d3.scale.linear().domain([0, 240]).rangeRound([0, 10 * 100]),
+                        x: d3.scale.linear().domain([0, 240]),
+                        xUnits: xUnits(24),
                         xAxisFormatter: formatSeconds,
                         barWidth: 41.6
                     }
                 },
                 {
+                    id: 'preparationTime',
                     title: 'Preparation time [mmm:ss]',
                     model: {
+                        width: 1060,
                         crossFilterGroup: 1,
                         dimension: preparationDuration,
                         group: preparationDurations,
-                        x: d3.scale.linear().domain([0, 3000]).rangeRound([0, 10 * 100]),
+                        x: d3.scale.linear().domain([0, 3000]),
+                        xUnits: xUnits(50),
                         xAxisFormatter: formatSeconds,
                         barWidth: 20
                     }
                 },
                 {
+                    id: 'indicatedCookingTime',
+                    title: 'Indicated cooking time [mmm:ss]',
+                    model: {
+                        width: 1060,
+                        crossFilterGroup: 1,
+                        dimension: indicatedCookingTime,
+                        group: indicatedCookingTimes,
+                        x: d3.scale.linear().domain([0, 7200]),
+                        xUnits: xUnits(24),
+                        xAxisFormatter: formatSeconds,
+                        barWidth: 20
+                    }
+                },
+                {
+                    id: 'estimatedDuration',
                     title: 'Estimated duration [mmm:ss]',
                     model: {
+                        width: 1060,
                         crossFilterGroup: 1,
                         dimension: estimatedDuration,
                         group: estimatedDurations,
-                        x: d3.scale.linear().domain([0, 1200]).rangeRound([0, 10 * 100]),
+                        x: d3.scale.linear().domain([0, 1200]),
+                        xUnits: xUnits(200),
                         xAxisFormatter: formatSeconds,
                         barWidth: 5
                     }
                 },
                 {
+                    id: 'actualDuration',
                     title: 'Actual duration [mmm:ss]',
                     model: {
+                        width: 1060,
                         crossFilterGroup: 1,
                         dimension: actualDuration,
                         group: actualDurations,
-                        x: d3.scale.linear().domain([0, 1200]).rangeRound([0, 10 * 100]),
+                        x: d3.scale.linear().domain([0, 1200]),
+                        xUnits: xUnits(200),
                         xAxisFormatter: formatSeconds,
                         barWidth: 5
                     }
                 },
                 {
+                    id: 'distance',
                     title: 'Distance [km]',
                     model: {
+                        width: 660,
                         crossFilterGroup: 1,
                         dimension: distance,
                         group: distances,
-                        x: d3.scale.linear().domain([0, 20]).rangeRound([0, 10 * 60]),
+                        x: d3.scale.linear().domain([0, 20]),
+                        xUnits: xUnits(80),
                         barWidth: 6
                     }
                 },
                 {
+                    id: 'routePosition',
                     title: 'Route position',
                     model: {
+                        width: 160,
                         crossFilterGroup: 1,
                         dimension: routePosition,
                         group: routePositions,
                         round: Math.floor,
-                        x: d3.scale.linear().domain([0, 10]).rangeRound([0, 10 * 10])
+                        x: d3.scale.linear().domain([0, 10]),
+                        xUnits: xUnits(10)
                     }
                 },
                 {
+                    id: 'liveTrackingScore',
                     title: 'Live tracking score',
                     model: {
+                        width: 280,
                         crossFilterGroup: 1,
                         dimension: score,
                         group: scores,
                         round: Math.floor,
-                        x: d3.scale.linear().domain([0, 110]).rangeRound([0, 20 * 11])
+                        x: d3.scale.linear().domain([0, 110]),
+                        xUnits: xUnits(11)
                     }
                 },
                 {
+                    id: 'date',
                     title: 'Date',
                     model: {
+                        width: 1060,
                         crossFilterGroup: 1,
                         dimension: date,
                         group: dates,
                         round: d3.time.day.round,
-                        x: d3.time.scale().domain([$scope.model.from, $scope.model.to]).rangeRound([0, 18 * dayRange($scope.model.from, $scope.model.to)]),
+                        x: d3.time.scale().domain([model.from, model.to]),
+                        xUnits: xUnits(model.days),
                         barWidth: 18
                     }
                 },
                 {
+                    id: 'day',
                     title: 'Day',
                     model: {
+                        width: 200,
                         crossFilterGroup: 1,
                         dimension: day,
                         group: days,
                         round: Math.floor,
-                        x: d3.scale.linear().domain([0, 7]).rangeRound([0, 20 * 7]),
+                        x: d3.scale.linear().domain([0, 7]),
+                        xUnits: xUnits(7),
                         xAxisFormatter: function (val) {
                             return DAYS[val % DAYS.length];
                         },
@@ -250,22 +298,55 @@ angular.module('delolap')
                     }
                 },
                 {
+                    width: 300,
+                    id: 'hourOfDay',
                     title: 'Hour of day',
                     model: {
                         crossFilterGroup: 1,
                         dimension: hour,
                         group: hours,
-                        x: d3.scale.linear().domain([0, 24]).rangeRound([0, 10 * 24])
+                        x: d3.scale.linear().domain([0, 24]).rangeRound([0, 10 * 24]),
+                        xUnits: xUnits(24)
                     }
                 }
             ];
+        }
 
-            $scope.model.deliveries = deliveries;
-            ChartService.setGroupSource(1, all);
-        }).error(function () {
-            console.error('Couldn\'t load deliveries', arguments);
-            $scope.model.deliveries = [];
-        }).finally(function () {
-            $scope.model.loading = false;
-        });
+        initCrossfilter([]);
+        function load(size, offset) {
+            $http.get('/api/deliveries', {
+                params: {
+                    from: model.from,
+                    to: model.to,
+                    limit: size,
+                    offset: offset
+                }
+            }).success(function (result) {
+                if (result.data && result.data.length) {
+                    var deliveries = preProcess(result.data);
+                    Array.prototype.push.apply(model.deliveries, deliveries);
+                    model.deliveryCrossfilter.add(deliveries);
+                    if (result.data.length === size) {
+                        load(Math.floor(size * 2), offset + size);
+                    } else {
+                        model.loading = false;
+                    }
+                } else {
+                    model.loading = false;
+                }
+            }).error(function () {
+                console.error('Couldn\'t load deliveries', arguments);
+                model.loading = false;
+            }).finally(function () {
+                if (model.firstLoad) {
+                    model.firstLoad = false;
+                } else {
+                    dc.renderAll();
+                }
+            });
+        }
+
+        model.firstLoad = true;
+        model.loading = true;
+        load(1000, 0);
     }]);

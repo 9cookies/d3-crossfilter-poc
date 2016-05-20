@@ -12,14 +12,18 @@ div.navbar.navbar-default.navbar-static-top(style="margin: 0")
 header#banner
     .container.page-header
         h1 Tracked deliveries
-        div(ng-if="!model.loading") Showing data for {{model.deliveries.length}} deliveries
-        div(ng-if="model.loading") Loading data...
+        div(ng-if="!model.firstLoad")
+            span(ng-if="model.deliveries.length") Showing data for {{model.deliveries.length}} deliveries
+            span(ng-if="model.deliveries.length && model.loading") &nbsp;and loading
+            i.fa.fa-cog.fa-spin.fa-fw(ng-if="model.deliveries.length && model.loading")
+            span(ng-if="!model.deliveries.length") No deliveries found!
+        div(ng-if="model.firstLoad") Loading data
+            i.fa.fa-cog.fa-spin.fa-fw
 
-.container
+.container(ng-if="!model.firstLoad && model.deliveries.length")
     div#charts
         div(ng-repeat="c in model.charts")
-            div.chart(bar-chart chart-model="c.model" style="float: left;")
-                div.title {{c.title}}
+            div.chart(dc-bar-chart="c")
 footer.footer
     .container
         p

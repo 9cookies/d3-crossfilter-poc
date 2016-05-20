@@ -1,10 +1,10 @@
 'use strict';
 
 angular.module('delolap')
-    .config(function ($routeProvider) {
+    .config(['$routeProvider', function ($routeProvider) {
         $routeProvider
             .when('/', {
                 templateUrl: 'partials/main.jade',
                 controller: 'MainCtrl'
             });
-    });
+    }]);
