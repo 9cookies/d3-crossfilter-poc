@@ -111,7 +111,11 @@ angular.module('delolap')
                 score = delivery.dimension(function (d) {
                     return d.live_tracking_score;
                 }),
-                scores = score.group(Math.floor);
+                scores = score.group(Math.floor),
+                distancePerMinute = delivery.dimension(function (d) {
+                    return d.distance / (d.actual_duration / 60);
+                }),
+                distancesPerMinute = distancePerMinute.group(roundGroup(25));
 
 
             function formatSeconds(s) {
@@ -158,20 +162,6 @@ angular.module('delolap')
                     }
                 },
                 {
-                    id: 'acceptanceDuration',
-                    title: 'Acceptance duration [mmm:ss]',
-                    model: {
-                        width: 1060,
-                        crossFilterGroup: 1,
-                        dimension: acceptanceDuration,
-                        group: acceptanceDurations,
-                        x: d3.scale.linear().domain([0, 240]),
-                        xUnits: xUnits(24),
-                        xAxisFormatter: formatSeconds,
-                        barWidth: 41.6
-                    }
-                },
-                {
                     id: 'preparationTime',
                     title: 'Preparation time [mmm:ss]',
                     model: {
@@ -179,22 +169,8 @@ angular.module('delolap')
                         crossFilterGroup: 1,
                         dimension: preparationDuration,
                         group: preparationDurations,
-                        x: d3.scale.linear().domain([0, 3000]),
-                        xUnits: xUnits(50),
-                        xAxisFormatter: formatSeconds,
-                        barWidth: 20
-                    }
-                },
-                {
-                    id: 'indicatedCookingTime',
-                    title: 'Indicated cooking time [mmm:ss]',
-                    model: {
-                        width: 1060,
-                        crossFilterGroup: 1,
-                        dimension: indicatedCookingTime,
-                        group: indicatedCookingTimes,
-                        x: d3.scale.linear().domain([0, 7200]),
-                        xUnits: xUnits(24),
+                        x: d3.scale.linear().domain([0, 14400]),
+                        xUnits: xUnits(240),
                         xAxisFormatter: formatSeconds,
                         barWidth: 20
                     }
@@ -228,49 +204,64 @@ angular.module('delolap')
                     }
                 },
                 {
+                    id: 'acceptanceDuration',
+                    title: 'Acceptance duration [mmm:ss]',
+                    model: {
+                        width: 560,
+                        crossFilterGroup: 1,
+                        dimension: acceptanceDuration,
+                        group: acceptanceDurations,
+                        x: d3.scale.linear().domain([0, 240]),
+                        xUnits: xUnits(24),
+                        xAxisFormatter: formatSeconds,
+                        barWidth: 41.6
+                    }
+                },
+                {
+                    id: 'indicatedCookingTime',
+                    title: 'Indicated cooking time [mmm:ss]',
+                    model: {
+                        width: 560,
+                        crossFilterGroup: 1,
+                        dimension: indicatedCookingTime,
+                        group: indicatedCookingTimes,
+                        x: d3.scale.linear().domain([0, 7200]),
+                        xUnits: xUnits(24),
+                        xAxisFormatter: formatSeconds,
+                        barWidth: 20
+                    }
+                },
+                {
+                    id: 'distancePerMinute',
+                    title: 'Distance per minute [m/min]',
+                    model: {
+                        width: 560,
+                        crossFilterGroup: 1,
+                        dimension: distancePerMinute,
+                        group: distancesPerMinute,
+                        x: d3.scale.linear().domain([0, 2000]),
+                        xUnits: xUnits(80),
+                        barWidth: 25
+                    }
+                },
+                {
                     id: 'distance',
                     title: 'Distance [km]',
                     model: {
-                        width: 660,
+                        width: 560,
                         crossFilterGroup: 1,
                         dimension: distance,
                         group: distances,
                         x: d3.scale.linear().domain([0, 20]),
-                        xUnits: xUnits(80),
+                        xUnits: xUnits(100),
                         barWidth: 6
-                    }
-                },
-                {
-                    id: 'routePosition',
-                    title: 'Route position',
-                    model: {
-                        width: 160,
-                        crossFilterGroup: 1,
-                        dimension: routePosition,
-                        group: routePositions,
-                        round: Math.floor,
-                        x: d3.scale.linear().domain([0, 10]),
-                        xUnits: xUnits(10)
-                    }
-                },
-                {
-                    id: 'liveTrackingScore',
-                    title: 'Live tracking score',
-                    model: {
-                        width: 280,
-                        crossFilterGroup: 1,
-                        dimension: score,
-                        group: scores,
-                        round: Math.floor,
-                        x: d3.scale.linear().domain([0, 110]),
-                        xUnits: xUnits(11)
                     }
                 },
                 {
                     id: 'date',
                     title: 'Date',
                     model: {
-                        width: 1060,
+                        width: 560,
                         crossFilterGroup: 1,
                         dimension: date,
                         group: dates,
@@ -298,15 +289,41 @@ angular.module('delolap')
                     }
                 },
                 {
-                    width: 300,
                     id: 'hourOfDay',
                     title: 'Hour of day',
                     model: {
+                        width: 300,
                         crossFilterGroup: 1,
                         dimension: hour,
                         group: hours,
                         x: d3.scale.linear().domain([0, 24]).rangeRound([0, 10 * 24]),
                         xUnits: xUnits(24)
+                    }
+                },
+                {
+                    id: 'routePosition',
+                    title: 'Route position',
+                    model: {
+                        width: 160,
+                        crossFilterGroup: 1,
+                        dimension: routePosition,
+                        group: routePositions,
+                        round: Math.floor,
+                        x: d3.scale.linear().domain([0, 10]),
+                        xUnits: xUnits(10)
+                    }
+                },
+                {
+                    id: 'liveTrackingScore',
+                    title: 'Live tracking score',
+                    model: {
+                        width: 280,
+                        crossFilterGroup: 1,
+                        dimension: score,
+                        group: scores,
+                        round: Math.floor,
+                        x: d3.scale.linear().domain([0, 110]),
+                        xUnits: xUnits(11)
                     }
                 }
             ];
